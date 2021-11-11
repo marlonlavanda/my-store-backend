@@ -1,34 +1,73 @@
 const express = require('express');
-const faker = require('faker');
+
+const UserService = require('../services/user.service');
+const { validatorHandler } = require('../middlewares/validator.handler');
+const { updateUserSchema, createUserSchema, getUserSchema } = require('../schemas/user.schema');
 
 const router = express.Router();
+const service = new UserService();
 
-// Query Params
-router.get('/', (req, res) => {
-  const  users = [];
-  const { size } = req.query;
-  const limit = size || 10
-
-  for(let i = 0; i < limit; i++){
-    users.push({
-      name: faker.name.firstName(),
-      lastName: faker.name.lastName(),
-      jobTitle: faker.name.jobTitle(),
-      avatar: faker.internet .avatar(),
-    })
+router.get('/', async (req, res, next) => {
+  try {
+    const users = await service.find();
+    res.json(users);
+  } catch (error) {
+    next(error);
   }
-  res.json(users)
-})
+});
 
-router.get('/:id', (req, res) => {
-  const { id } = req.params
-  res.json(
-    {
-      id,
-      name: 'Marlon',
-      lastName: 'Lavanda'
-    },
-  );
-})
+router.get('/:id',
+  validatorHandler(getUserSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const category = await service.findOne(id);
+      res.json(category);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post('/',
+  validatorHandler(createUserSchema, 'body'),
+  async (req, res, next) => {
+    try {
+      const body = req.body;
+      const newCategory = await service.create(body);
+      res.status(201).json(newCategory);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.patch('/:id',
+  validatorHandler(getUserSchema, 'params'),
+  validatorHandler(updateUserSchema, 'body'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const body = req.body;
+      const category = await service.update(id, body);
+      res.json(category);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.delete('/:id',
+  validatorHandler(getUserSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      await service.delete(id);
+      res.status(201).json({id});
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 module.exports = router;
